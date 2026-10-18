@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scam Shield</title>
+<style>
+:root{--bg:#0b1020;--card:#141b34;--text:#e8ecff;--mut:#8f9bc7;--line:#222c52;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--acc:#6366f1}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1b2450,transparent),var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:26px;margin:8px 0 2px}
+.sub{color:var(--mut);margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+textarea{width:100%;min-height:130px;background:#0e1428;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:16px;resize:vertical;outline:none}
+textarea:focus{border-color:var(--acc)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button{background:var(--acc);color:#fff;border:0;border-radius:10px;padding:11px 16px;font-size:15px;cursor:pointer}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+.chip{background:#0e1428;border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.res{display:none;gap:18px;align-items:center;flex-wrap:wrap}
+.gauge{position:relative;width:130px;height:130px}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .n{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:28px;font-weight:700}
+.gauge .n small{font-size:11px;color:var(--mut);font-weight:400}
+.badge{display:inline-block;padding:6px 14px;border-radius:999px;font-weight:700;font-size:15px}
+.SCAM{background:#3a1414;color:var(--bad)}.SUSPICIOUS{background:#3a2a0c;color:var(--warn)}.SAFE{background:#0f2d1b;color:var(--ok)}
+.msg{background:#0e1428;border-radius:10px;padding:12px;line-height:1.6;word-break:break-word}
+mark{background:var(--bad)!important;color:#fff!important;border-radius:4px;padding:0 3px}
+ul{margin:6px 0 0;padding-left:20px;line-height:1.7}
+.link{background:#0e1428;border-radius:10px;padding:10px;margin-top:8px;font-family:monospace;font-size:13px;word-break:break-all}
+.hist div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+.hist span:first-child{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tip{border-left:4px solid var(--acc)}
+h3{margin:0 0 6px;font-size:15px;color:var(--mut);font-weight:600}
+</style></head><body><div class="wrap">
+<h1>🛡️ Scam Shield</h1>
+<div class="sub">Paste any SMS, WhatsApp or email text. Get a verdict, the reasons and what to do.</div>
+
+<div class="card">
+  <textarea id="t" placeholder="Paste a suspicious message here..."></textarea>
+  <div class="row">
+    <button onclick="check()">Check message</button>
+    <button class="ghost" onclick="pasteIt()">📋 Paste from clipboard</button>
+    <button class="ghost" onclick="clr()">Clear</button>
+  </div>
+  <div class="row" id="ex"></div>
+</div>
+
+<div class="card res" id="res">
+  <div class="gauge"><svg width="130" height="130"><circle cx="65" cy="65" r="52" fill="none" stroke="#222c52" stroke-width="12"/><circle id="arc" cx="65" cy="65" r="52" fill="none" stroke="#22c55e" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7" style="transition:all .6s"/></svg>
+    <div class="n"><span id="pct">0%</span><small>scam chance</small></div></div>
+  <div style="flex:1;min-width:220px"><span class="badge" id="badge"></span>
+    <div style="margin-top:10px;color:var(--mut);font-size:13px" id="meta"></div></div>
+</div>
+
+<div class="card" id="mbox" style="display:none"><h3>Your message (risky parts marked)</h3><div class="msg" id="msg"></div></div>
+<div class="card" id="rbox" style="display:none"><h3>Why it looks risky</h3><ul id="reasons"></ul></div>
+<div class="card" id="lbox" style="display:none"><h3>Links found</h3><div id="links"></div></div>
+<div class="card tip" id="tip" style="display:none"><h3>What should you do now?</h3>
+<ul><li>Do not click any link or install any app from this message</li><li>Never share OTP, PIN, CVV or password with anyone</li><li>If you lost money, call <b>1930</b> at once</li><li>Report at <b>cybercrime.gov.in</b></li></ul>
+<div class="row"><button class="ghost" onclick="report()">🚩 Report this as scam</button></div></div>
+
+<div class="card hist"><h3>Recent checks (stored only in this browser)</h3><div id="h"></div></div>
+<div class="sub" style="font-size:12px">Decision-support tool. Always verify with your bank through official channels.</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const EX=["Your account is blocked. Share OTP now","Aapka SBI account band ho jayega. Abhi OTP share karein","You won Rs 25 lakh! Pay Rs 5000 fee at bit.ly/claim-now","Your KYC is pending. Download update: short.link/update.apk","Your Swiggy order is out for delivery"];
+EX.forEach(e=>{const c=document.createElement("span");c.className="chip";c.textContent=e.slice(0,34)+(e.length>34?"…":"");c.onclick=()=>{$("t").value=e;check()};$("ex").appendChild(c)});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let timer;$("t").addEventListener("input",()=>{clearTimeout(timer);if($("t").value.trim().length>12)timer=setTimeout(check,700)});
+async function check(){
+  const text=$("t").value.trim(); if(!text)return;
+  let r; try{const x=await fetch("/check",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});r=await x.json();}catch(e){alert("Server not reachable. Is api.py running?");return}
+  const col={SCAM:"#ef4444",SUSPICIOUS:"#f59e0b",SAFE:"#22c55e"}[r.verdict];
+  $("res").style.display="flex"; $("arc").style.stroke=col;
+  $("arc").style.strokeDashoffset=326.7*(1-r.scam_percent/100);
+  $("pct").textContent=r.scam_percent+"%";
+  $("badge").className="badge "+r.verdict;
+  $("badge").textContent={SCAM:"🚨 Likely SCAM",SUSPICIOUS:"⚠️ Suspicious",SAFE:"✅ Looks safe"}[r.verdict];
+  $("meta").textContent="AI score "+r.ai_percent+"%  |  "+r.reasons.length+" rule signal(s)";
+  $("mbox").style.display="block"; $("msg").innerHTML=r.highlight;
+  $("rbox").style.display=r.reasons.length?"block":"none";
+  $("reasons").innerHTML=r.reasons.map(x=>"<li>"+esc(x)+"</li>").join("");
+  $("lbox").style.display=r.links.length?"block":"none";
+  $("links").innerHTML=r.links.map(l=>"<div class='link'>🔗 "+esc(l.link)+(l.warnings.length?"<ul>"+l.warnings.map(w=>"<li>⚠️ "+esc(w)+"</li>").join("")+"</ul>":"<br>Unknown link. Open only if you trust the sender")+"</div>").join("");
+  $("tip").style.display=r.verdict==="SAFE"?"none":"block";
+  save(text,r);
+}
+function save(t,r){try{let h=JSON.parse(localStorage.getItem("h")||"[]");h=h.filter(x=>x.t!==t);h.unshift({t,v:r.verdict,p:r.scam_percent});localStorage.setItem("h",JSON.stringify(h.slice(0,15)));}catch(e){}draw()}
+function draw(){let h=[];try{h=JSON.parse(localStorage.getItem("h")||"[]")}catch(e){}
+  $("h").innerHTML=h.length?"":"<span style='color:var(--mut)'>Nothing yet</span>";
+  h.forEach(x=>{const d=document.createElement("div");d.innerHTML="<span>"+esc(x.t)+"</span><span class='badge "+x.v+"' style='font-size:12px;padding:2px 10px'>"+x.p+"%</span>";d.onclick=()=>{$("t").value=x.t;check()};$("h").appendChild(d)})}
+async function pasteIt(){try{$("t").value=await navigator.clipboard.readText();check()}catch(e){alert("Clipboard access is blocked here. Paste manually with Ctrl+V.")}}
+function clr(){$("t").value="";["res","mbox","rbox","lbox","tip"].forEach(i=>$(i).style.display="none")}
+async function report(){await fetch("/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:$("t").value})});alert("Thank you. Saved for review.")}
+draw();
+</script></div></body></html>
