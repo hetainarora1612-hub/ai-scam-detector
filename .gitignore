@@ -1,0 +1,6 @@
+__pycache__/
+reported.csv
+spam.csv
+check.py
+big_data.csv
+.venv/
